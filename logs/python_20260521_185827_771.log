@@ -1,0 +1,63 @@
+2026-05-21T18:58:27.773244Z[INFO][src/python/py_mod.rs:24] bc_stark_sdk version: 1.1.9
+2026-05-21T18:58:51.893818Z[INFO][src/modbus/device_ctx.rs:998] Found device at baudrate Baud115200, slave_id: 0x1
+2026-05-21T18:58:51.894290Z[INFO][src/modbus/device_ctx.rs:1000] Device SN: "BCMTL1061H2500008", hw_type: Revo1Touch
+2026-05-21T18:58:51.897765Z[INFO][src/modbus/device_ctx.rs:1009] Device FW Version: "1.8.24.F"
+2026-05-21T18:58:51.899282Z[INFO][src/stark/api/device_info.rs:28] slave[1] get_device_info...
+2026-05-21T18:58:51.909804Z[INFO][src/stark/api/device_info.rs:158] DeviceInfo: "{\"sku_type\":\"MediumLeft\",\"hardware_type\":\"Revo1Touch\",\"serial_number\":\"BCMTL1061H2500008\",\"firmware_version\":\"1.8.24.F\"}"
+2026-05-21T18:58:51.910304Z[INFO][/home/robot/codePWC/stark-serialport-example/python/revo1/revo1_utils.py:52] Device info: DeviceInfo { sku_type: MediumLeft, hardware_type: Revo1Touch, serial_number: BCMTL1061H2500008, firmware_version: 1.8.24.F }
+2026-05-21T18:58:51.910552Z[INFO][/home/robot/codePWC/stark-serialport-example/python/revo1/revo1_utils.py:56] Touch hand
+2026-05-21T18:58:51.910734Z[INFO][src/stark/api/device_info.rs:28] slave[1] get_device_info...
+2026-05-21T18:58:51.920789Z[INFO][src/stark/api/device_info.rs:158] DeviceInfo: "{\"sku_type\":\"MediumLeft\",\"hardware_type\":\"Revo1Touch\",\"serial_number\":\"BCMTL1061H2500008\",\"firmware_version\":\"1.8.24.F\"}"
+2026-05-21T18:58:56.589391Z[WARNING][src/modbus/device_ctx.rs:1678] slave[1] write_multiple_registers(address: 1010, data: [57, 0, 14, 0, 4, 14]) timeout
+2026-05-21T18:59:04.767037Z[WARNING][src/modbus/device_ctx.rs:1678] slave[1] write_multiple_registers(address: 1010, data: [47, 0, 9, 27, 25, 0]) timeout
+2026-05-21T18:59:12.951140Z[WARNING][src/modbus/device_ctx.rs:1678] slave[1] write_multiple_registers(address: 1010, data: [17, 0, 0, 0, 0, 0]) timeout
+2026-05-21T18:59:21.131223Z[WARNING][src/modbus/device_ctx.rs:1678] slave[1] write_multiple_registers(address: 1010, data: [10, 0, 0, 0, 0, 0]) timeout
+2026-05-21T18:59:29.312038Z[WARNING][src/modbus/device_ctx.rs:1678] slave[1] write_multiple_registers(address: 1010, data: [46, 0, 1, 2, 23, 28]) timeout
+2026-05-21T18:59:37.492181Z[WARNING][src/modbus/device_ctx.rs:1678] slave[1] write_multiple_registers(address: 1010, data: [34, 1, 32, 48, 63, 60]) timeout
+2026-05-21T18:59:45.686325Z[WARNING][src/modbus/device_ctx.rs:1678] slave[1] write_multiple_registers(address: 1010, data: [57, 0, 0, 12, 14, 6]) timeout
+2026-05-21T18:59:53.867224Z[WARNING][src/modbus/device_ctx.rs:1678] slave[1] write_multiple_registers(address: 1010, data: [42, 0, 3, 0, 3, 9]) timeout
+2026-05-21T18:59:58.006124Z[WARNING][src/modbus/device_ctx.rs:1678] slave[1] write_multiple_registers(address: 1010, data: [42, 30, 0, 0, 0, 0]) timeout
+2026-05-21T19:00:02.103058Z[WARNING][src/modbus/device_ctx.rs:1678] slave[1] write_multiple_registers(address: 1010, data: [0, 0, 6, 5, 9, 8]) timeout
+2026-05-21T19:00:06.242222Z[WARNING][src/modbus/device_ctx.rs:1678] slave[1] write_multiple_registers(address: 1010, data: [19, 0, 3, 0, 2, 5]) timeout
+2026-05-21T19:00:10.339287Z[WARNING][src/modbus/device_ctx.rs:1678] slave[1] write_multiple_registers(address: 1010, data: [3, 0, 0, 0, 0, 0]) timeout
+2026-05-21T19:00:14.477334Z[WARNING][src/modbus/device_ctx.rs:1678] slave[1] write_multiple_registers(address: 1010, data: [52, 0, 0, 0, 0, 2]) timeout
+2026-05-21T19:00:22.658126Z[WARNING][src/modbus/device_ctx.rs:1678] slave[1] write_multiple_registers(address: 1010, data: [31, 47, 0, 0, 0, 15]) timeout
+2026-05-21T19:00:30.839196Z[WARNING][src/modbus/device_ctx.rs:1678] slave[1] write_multiple_registers(address: 1010, data: [68, 46, 0, 0, 0, 1]) timeout
+2026-05-21T19:00:39.019115Z[WARNING][src/modbus/device_ctx.rs:1678] slave[1] write_multiple_registers(address: 1010, data: [31, 47, 0, 0, 0, 0]) timeout
+2026-05-21T19:00:47.199358Z[WARNING][src/modbus/device_ctx.rs:1678] slave[1] write_multiple_registers(address: 1010, data: [48, 0, 1, 3, 14, 20]) timeout
+2026-05-21T19:00:55.380036Z[WARNING][src/modbus/device_ctx.rs:1678] slave[1] write_multiple_registers(address: 1010, data: [63, 0, 2, 0, 5, 11]) timeout
+2026-05-21T19:01:03.559262Z[WARNING][src/modbus/device_ctx.rs:1678] slave[1] write_multiple_registers(address: 1010, data: [61, 0, 37, 22, 28, 34]) timeout
+2026-05-21T19:01:11.740345Z[WARNING][src/modbus/device_ctx.rs:1678] slave[1] write_multiple_registers(address: 1010, data: [19, 0, 0, 0, 0, 3]) timeout
+2026-05-21T19:01:19.921279Z[WARNING][src/modbus/device_ctx.rs:1678] slave[1] write_multiple_registers(address: 1010, data: [32, 40, 0, 0, 0, 8]) timeout
+2026-05-21T19:01:24.059043Z[WARNING][src/modbus/device_ctx.rs:1678] slave[1] write_multiple_registers(address: 1010, data: [61, 0, 0, 0, 4, 9]) timeout
+2026-05-21T19:01:28.156182Z[WARNING][src/modbus/device_ctx.rs:1678] slave[1] write_multiple_registers(address: 1010, data: [98, 24, 0, 0, 5, 12]) timeout
+2026-05-21T19:01:32.296229Z[WARNING][src/modbus/device_ctx.rs:1678] slave[1] write_multiple_registers(address: 1010, data: [33, 0, 0, 0, 0, 22]) timeout
+2026-05-21T19:01:36.392177Z[WARNING][src/modbus/device_ctx.rs:1678] slave[1] write_multiple_registers(address: 1010, data: [47, 0, 0, 0, 3, 10]) timeout
+2026-05-21T19:01:40.531237Z[WARNING][src/modbus/device_ctx.rs:1678] slave[1] write_multiple_registers(address: 1010, data: [40, 35, 1, 0, 1, 11]) timeout
+2026-05-21T19:01:48.711237Z[WARNING][src/modbus/device_ctx.rs:1678] slave[1] write_multiple_registers(address: 1010, data: [32, 0, 8, 34, 47, 47]) timeout
+2026-05-21T19:01:56.892291Z[WARNING][src/modbus/device_ctx.rs:1678] slave[1] write_multiple_registers(address: 1010, data: [29, 0, 20, 5, 5, 10]) timeout
+2026-05-21T19:02:05.073142Z[WARNING][src/modbus/device_ctx.rs:1678] slave[1] write_multiple_registers(address: 1010, data: [35, 0, 0, 0, 3, 12]) timeout
+2026-05-21T19:02:13.253220Z[WARNING][src/modbus/device_ctx.rs:1678] slave[1] write_multiple_registers(address: 1010, data: [43, 0, 0, 64, 10, 12]) timeout
+2026-05-21T19:02:21.433059Z[WARNING][src/modbus/device_ctx.rs:1678] slave[1] write_multiple_registers(address: 1010, data: [74, 1, 94, 87, 92, 93]) timeout
+2026-05-21T19:02:29.613128Z[WARNING][src/modbus/device_ctx.rs:1678] slave[1] write_multiple_registers(address: 1010, data: [44, 0, 13, 6, 11, 18]) timeout
+2026-05-21T19:02:37.794250Z[WARNING][src/modbus/device_ctx.rs:1678] slave[1] write_multiple_registers(address: 1010, data: [42, 0, 10, 9, 17, 28]) timeout
+2026-05-21T19:02:45.975070Z[WARNING][src/modbus/device_ctx.rs:1678] slave[1] write_multiple_registers(address: 1010, data: [44, 0, 9, 25, 25, 18]) timeout
+2026-05-21T19:02:50.113262Z[WARNING][src/modbus/device_ctx.rs:1678] slave[1] write_multiple_registers(address: 1010, data: [36, 0, 11, 10, 18, 24]) timeout
+2026-05-21T19:02:54.210286Z[WARNING][src/modbus/device_ctx.rs:1678] slave[1] write_multiple_registers(address: 1010, data: [68, 3, 23, 19, 43, 46]) timeout
+2026-05-21T19:02:58.349094Z[WARNING][src/modbus/device_ctx.rs:1678] slave[1] write_multiple_registers(address: 1010, data: [39, 0, 54, 30, 3, 3]) timeout
+2026-05-21T19:03:02.446352Z[WARNING][src/modbus/device_ctx.rs:1678] slave[1] write_multiple_registers(address: 1010, data: [46, 0, 75, 69, 74, 71]) timeout
+2026-05-21T19:03:06.585182Z[WARNING][src/modbus/device_ctx.rs:1678] slave[1] write_multiple_registers(address: 1010, data: [55, 30, 100, 92, 94, 99]) timeout
+2026-05-21T19:03:14.753160Z[WARNING][src/modbus/device_ctx.rs:1678] slave[1] write_multiple_registers(address: 1010, data: [55, 0, 21, 22, 36, 39]) timeout
+2026-05-21T19:03:22.932148Z[WARNING][src/modbus/device_ctx.rs:1678] slave[1] write_multiple_registers(address: 1010, data: [39, 0, 4, 24, 72, 71]) timeout
+2026-05-21T19:03:31.113463Z[WARNING][src/modbus/device_ctx.rs:1678] slave[1] write_multiple_registers(address: 1010, data: [100, 41, 0, 0, 0, 7]) timeout
+2026-05-21T19:03:39.292165Z[WARNING][src/modbus/device_ctx.rs:1678] slave[1] write_multiple_registers(address: 1010, data: [12, 0, 23, 30, 34, 18]) timeout
+2026-05-21T19:03:47.473175Z[WARNING][src/modbus/device_ctx.rs:1678] slave[1] write_multiple_registers(address: 1010, data: [34, 0, 13, 1, 13, 20]) timeout
+2026-05-21T19:03:55.653370Z[WARNING][src/modbus/device_ctx.rs:1678] slave[1] write_multiple_registers(address: 1010, data: [36, 0, 5, 28, 56, 45]) timeout
+2026-05-21T19:04:03.834242Z[WARNING][src/modbus/device_ctx.rs:1678] slave[1] write_multiple_registers(address: 1010, data: [27, 0, 55, 52, 53, 55]) timeout
+2026-05-21T19:04:12.014281Z[WARNING][src/modbus/device_ctx.rs:1678] slave[1] write_multiple_registers(address: 1010, data: [29, 0, 7, 1, 15, 33]) timeout
+2026-05-21T19:04:16.154214Z[WARNING][src/modbus/device_ctx.rs:1678] slave[1] write_multiple_registers(address: 1010, data: [49, 0, 5, 4, 17, 29]) timeout
+2026-05-21T19:04:20.250118Z[WARNING][src/modbus/device_ctx.rs:1678] slave[1] write_multiple_registers(address: 1010, data: [30, 0, 2, 0, 5, 17]) timeout
+2026-05-21T19:04:24.389107Z[WARNING][src/modbus/device_ctx.rs:1678] slave[1] write_multiple_registers(address: 1010, data: [28, 0, 6, 3, 14, 27]) timeout
+2026-05-21T19:04:28.488191Z[WARNING][src/modbus/device_ctx.rs:1678] slave[1] write_multiple_registers(address: 1010, data: [45, 0, 14, 14, 23, 32]) timeout
+2026-05-21T19:04:32.639314Z[WARNING][src/modbus/device_ctx.rs:1678] slave[1] write_multiple_registers(address: 1010, data: [40, 0, 8, 37, 59, 61]) timeout
+2026-05-21T19:04:40.818459Z[WARNING][src/modbus/device_ctx.rs:1678] slave[1] write_multiple_registers(address: 1010, data: [51, 0, 24, 29, 32, 37]) timeout

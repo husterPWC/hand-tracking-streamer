@@ -1,0 +1,22 @@
+2026-05-21T19:18:01.267043Z[INFO][src/python/py_mod.rs:24] bc_stark_sdk version: 1.1.9
+2026-05-21T19:18:26.643122Z[INFO][src/modbus/device_ctx.rs:998] Found device at baudrate Baud115200, slave_id: 0x1
+2026-05-21T19:18:26.643598Z[INFO][src/modbus/device_ctx.rs:1000] Device SN: "BCMTL1061H2500008", hw_type: Revo1Touch
+2026-05-21T19:18:26.648093Z[INFO][src/modbus/device_ctx.rs:1009] Device FW Version: "1.8.24.F"
+2026-05-21T19:18:26.649797Z[INFO][src/stark/api/device_info.rs:28] slave[1] get_device_info...
+2026-05-21T19:18:26.660289Z[INFO][src/stark/api/device_info.rs:158] DeviceInfo: "{\"sku_type\":\"MediumLeft\",\"hardware_type\":\"Revo1Touch\",\"serial_number\":\"BCMTL1061H2500008\",\"firmware_version\":\"1.8.24.F\"}"
+2026-05-21T19:18:26.660798Z[INFO][/home/robot/codePWC/stark-serialport-example/python/revo1/revo1_utils.py:52] Device info: DeviceInfo { sku_type: MediumLeft, hardware_type: Revo1Touch, serial_number: BCMTL1061H2500008, firmware_version: 1.8.24.F }
+2026-05-21T19:18:26.661095Z[INFO][/home/robot/codePWC/stark-serialport-example/python/revo1/revo1_utils.py:56] Touch hand
+2026-05-21T19:18:26.661380Z[INFO][src/stark/api/device_info.rs:28] slave[1] get_device_info...
+2026-05-21T19:18:26.672383Z[INFO][src/stark/api/device_info.rs:158] DeviceInfo: "{\"sku_type\":\"MediumLeft\",\"hardware_type\":\"Revo1Touch\",\"serial_number\":\"BCMTL1061H2500008\",\"firmware_version\":\"1.8.24.F\"}"
+2026-05-21T19:18:29.794484Z[WARNING][src/modbus/device_ctx.rs:1678] slave[1] write_multiple_registers(address: 1010, data: [31, 14, 1, 0, 5, 19]) timeout
+2026-05-21T19:18:35.289251Z[WARNING][src/modbus/device_ctx.rs:1678] slave[1] write_multiple_registers(address: 1010, data: [54, 28, 3, 0, 8, 18]) timeout
+2026-05-21T19:18:40.774157Z[WARNING][src/modbus/device_ctx.rs:1678] slave[1] write_multiple_registers(address: 1010, data: [58, 12, 5, 1, 8, 17]) timeout
+2026-05-21T19:18:46.260122Z[WARNING][src/modbus/device_ctx.rs:1678] slave[1] write_multiple_registers(address: 1010, data: [42, 100, 5, 12, 20, 16]) timeout
+2026-05-21T19:18:51.746307Z[WARNING][src/modbus/device_ctx.rs:1678] slave[1] write_multiple_registers(address: 1010, data: [100, 61, 18, 13, 19, 22]) timeout
+2026-05-21T19:18:57.232240Z[WARNING][src/modbus/device_ctx.rs:1678] slave[1] write_multiple_registers(address: 1010, data: [40, 100, 70, 67, 67, 57]) timeout
+2026-05-21T19:19:02.718320Z[WARNING][src/modbus/device_ctx.rs:1678] slave[1] write_multiple_registers(address: 1010, data: [26, 100, 41, 56, 58, 40]) timeout
+2026-05-21T19:19:08.204190Z[WARNING][src/modbus/device_ctx.rs:1678] slave[1] write_multiple_registers(address: 1010, data: [44, 100, 87, 80, 66, 64]) timeout
+2026-05-21T19:19:10.996432Z[WARNING][src/modbus/device_ctx.rs:1678] slave[1] write_multiple_registers(address: 1010, data: [22, 100, 81, 97, 100, 94]) timeout
+2026-05-21T19:19:13.761152Z[WARNING][src/modbus/device_ctx.rs:1678] slave[1] write_multiple_registers(address: 1010, data: [16, 96, 76, 83, 90, 85]) timeout
+2026-05-21T19:19:16.551293Z[WARNING][src/modbus/device_ctx.rs:1678] slave[1] write_multiple_registers(address: 1010, data: [44, 3, 0, 0, 2, 16]) timeout
+2026-05-21T19:19:19.315224Z[WARNING][src/modbus/device_ctx.rs:1678] slave[1] write_multiple_registers(address: 1010, data: [63, 71, 10, 17, 22, 18]) timeout

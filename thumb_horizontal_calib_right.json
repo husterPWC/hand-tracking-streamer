@@ -1,0 +1,22 @@
+{
+  "hand": "right",
+  "channel": "thumb_horizontal",
+  "feature": "proj_normal",
+  "open": -0.20270025730133057,
+  "closed": -1.191160798072815,
+  "delta": 0.9884605407714844,
+  "open_features": {
+    "dist_thumb_palm": 1.6612592935562134,
+    "dist_thumb_index": 1.134055256843567,
+    "dist_thumb_middle": 1.491046667098999,
+    "proj_across": 1.6481540203094482,
+    "proj_normal": -0.20270025730133057
+  },
+  "closed_features": {
+    "dist_thumb_palm": 1.466886281967163,
+    "dist_thumb_index": 1.173537254333496,
+    "dist_thumb_middle": 1.3564748764038086,
+    "proj_across": 0.7077955603599548,
+    "proj_normal": -1.191160798072815
+  }
+}

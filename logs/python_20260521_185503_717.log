@@ -1,0 +1,11 @@
+2026-05-21T18:55:03.719050Z[INFO][src/python/py_mod.rs:24] bc_stark_sdk version: 1.1.9
+2026-05-21T18:55:38.764405Z[INFO][src/modbus/device_ctx.rs:998] Found device at baudrate Baud115200, slave_id: 0x1
+2026-05-21T18:55:38.764866Z[INFO][src/modbus/device_ctx.rs:1000] Device SN: "BCMTL1061H2500008", hw_type: Revo1Touch
+2026-05-21T18:55:38.768398Z[INFO][src/modbus/device_ctx.rs:1009] Device FW Version: "1.8.24.F"
+2026-05-21T18:55:38.770045Z[INFO][src/stark/api/device_info.rs:28] slave[1] get_device_info...
+2026-05-21T18:55:38.780432Z[INFO][src/stark/api/device_info.rs:158] DeviceInfo: "{\"sku_type\":\"MediumLeft\",\"hardware_type\":\"Revo1Touch\",\"serial_number\":\"BCMTL1061H2500008\",\"firmware_version\":\"1.8.24.F\"}"
+2026-05-21T18:55:38.780961Z[INFO][/home/robot/codePWC/stark-serialport-example/python/revo1/revo1_utils.py:52] Device info: DeviceInfo { sku_type: MediumLeft, hardware_type: Revo1Touch, serial_number: BCMTL1061H2500008, firmware_version: 1.8.24.F }
+2026-05-21T18:55:38.781355Z[INFO][/home/robot/codePWC/stark-serialport-example/python/revo1/revo1_utils.py:56] Touch hand
+2026-05-21T18:55:38.781633Z[INFO][src/stark/api/device_info.rs:28] slave[1] get_device_info...
+2026-05-21T18:55:38.792551Z[INFO][src/stark/api/device_info.rs:158] DeviceInfo: "{\"sku_type\":\"MediumLeft\",\"hardware_type\":\"Revo1Touch\",\"serial_number\":\"BCMTL1061H2500008\",\"firmware_version\":\"1.8.24.F\"}"
+2026-05-21T18:56:01.769404Z[WARNING][src/modbus/device_ctx.rs:1678] slave[1] write_multiple_registers(address: 1010, data: [45, 0, 26, 29, 33, 2]) timeout

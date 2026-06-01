@@ -1,0 +1,148 @@
+每次开机后的标准流程
+0. 硬件连接
+
+先确认：
+
+1. Quest 3 用 USB-C 数据线连接电脑
+2. 强脑灵巧手连接电脑，对应串口一般是 /dev/ttyUSB0
+3. Quest 3 里打开 Hand Tracking Streamer
+4. 强脑灵巧手上电
+
+
+cd ~/codePWC/hand-tracking-streamer
+conda activate hts
+
+./hts_vr_connect.sh
+
+如果出现权限问题，就运行：
+
+./hts_vr_connect.sh --sudo
+
+成功后应该看到类似：
+
+SUCCESS
+Quest app should use:
+  Protocol: TCP
+  Host/IP: 127.0.0.1
+  Port: 8000
+Quest 3 端设置
+
+在 Quest 3 的 Hand Tracking Streamer 里面设置：
+
+Protocol: TCP
+Host/IP: 127.0.0.1
+Port: 8000
+Hand side: Left
+Start Streaming
+
+如果你后面要右手，就改成：
+
+Hand side: Right
+终端 2：启动强脑灵巧手实时控制
+
+再开一个新终端：
+
+cd ~/codePWC/hand-tracking-streamer
+conda activate hts
+
+sudo chmod 666 /dev/ttyUSB0
+
+然后运行实时控制：
+
+python hts_brainco_bridge.py \
+  --hand left \
+  --brainco-port /dev/ttyUSB0 \
+  --thumb-calib thumb_horizontal_calib_left.json \
+  --send-hz 50 \
+  --max-step 50 \
+  --smooth-alpha 0.95 \
+  --print-hz 5 \
+  --enable-hand
+
+这是目前推荐的实时版本。
+
+如果你想最低延迟
+
+可以用这个更激进的版本：
+
+python hts_brainco_bridge.py \
+  --hand left \
+  --brainco-port /dev/ttyUSB0 \
+  --thumb-calib thumb_horizontal_calib_left.json \
+  --send-hz 60 \
+  --max-step 100 \
+  --smooth-alpha 1.0 \
+  --print-hz 3 \
+  --enable-hand
+
+这个基本等于：
+
+60Hz 发送
+不限制大步进
+几乎不平滑
+低频打印
+
+如果动作抖动明显，就退回上一版：
+
+--send-hz 50 --max-step 50 --smooth-alpha 0.95
+如果只是测试，不控制真实手
+
+去掉 --enable-hand：
+
+python hts_brainco_bridge.py \
+  --hand left \
+  --brainco-port /dev/ttyUSB0 \
+  --thumb-calib thumb_horizontal_calib_left.json \
+  --send-hz 50 \
+  --max-step 50 \
+  --smooth-alpha 0.95 \
+  --print-hz 5
+
+这时只会打印，不会控制强脑手。
+
+如果要重新标定大拇指横向
+
+Quest streaming 开着，然后运行：
+
+cd ~/codePWC/hand-tracking-streamer
+conda activate hts
+
+python hts_thumb_calibrate.py --hand left --seconds 2
+
+会生成：
+
+thumb_horizontal_calib_left.json
+
+之后实时控制命令继续带上：
+
+--thumb-calib thumb_horizontal_calib_left.json
+每次开机最简命令总结
+终端 1
+cd ~/codePWC/hand-tracking-streamer
+conda activate hts
+./hts_vr_connect.sh
+终端 2
+cd ~/codePWC/hand-tracking-streamer
+conda activate hts
+sudo chmod 666 /dev/ttyUSB0
+
+python hts_brainco_bridge.py \
+  --hand left \
+  --brainco-port /dev/ttyUSB0 \
+  --thumb-calib thumb_horizontal_calib_left.json \
+  --send-hz 50 \
+  --max-step 50 \
+  --smooth-alpha 0.95 \
+  --print-hz 5 \
+  --enable-hand
+退出方式
+
+在运行桥接的终端里按：
+
+Ctrl + C
+
+程序会尝试发送：
+
+[0, 0, 0, 0, 0, 0]
+
+让强脑手张开，然后关闭串口。
