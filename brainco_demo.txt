@@ -46,7 +46,7 @@ cd ~/codePWC/hand-tracking-streamer
 conda activate hts
 
 sudo chmod 666 /dev/ttyUSB0
-
+sudo chmod 666 /dev/ttyUSB0 /dev/ttyUSB1
 然后运行实时控制：
 
 python hts_brainco_bridge.py \
@@ -136,6 +136,8 @@ python hts_brainco_bridge.py \
   --print-hz 5 \
   --enable-hand
 退出方式
+
+
 
 在运行桥接的终端里按：
 

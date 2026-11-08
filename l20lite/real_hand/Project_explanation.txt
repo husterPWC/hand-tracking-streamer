@@ -1,0 +1,1049 @@
+L20Lite 真机接入与 MuJoCo Sim–Real 10-D 对齐阶段完整总结
+日期：2026-08-28
+项目目录：/home/pwc/RoboCode/l20lite
+
+============================================================
+一、阶段目标
+============================================================
+
+本阶段的核心目标不是直接开始 UniDexGrasp，而是先解决一个更基础、但决定后续 Sim-to-Real 是否成立的问题：
+
+1. 真正接通 LinkerHand L20 Lite 右手；
+2. 明确 LinkerBot SDK 的 10 个控制通道分别对应真机什么运动；
+3. 验证 MuJoCo 中构建的 “10 个主动自由度 + mimic 从动关节” 是否符合真机实际控制结构；
+4. 明确真机 SDK 10-D 与 MuJoCo 10-D 的通道顺序及正负方向；
+5. 用真机和 MuJoCo 同时执行相同动作、相同标准姿态，直接进行 Sim–Real 对照；
+6. 最终形成统一的 l20lite_joint_mapping.py，作为后续 UniDexGrasp → L20Lite → MuJoCo / 真机的共同接口。
+
+最终结果：
+本阶段全部验证通过。当前 L20Lite MuJoCo 10-D + mimic 模型可以作为真机控制模型继续用于后续抓取重定向和 Sim-to-Real。
+
+
+============================================================
+二、当前项目与环境
+============================================================
+
+项目根目录：
+
+    /home/pwc/RoboCode/l20lite
+
+真机相关目录：
+
+    /home/pwc/RoboCode/l20lite/real_hand
+
+当前用于真机 + MuJoCo 联合测试的 Conda 环境：
+
+    l20lite_real
+
+主要软件：
+
+    Python 3.10
+    linkerbot 0.5.4
+    MuJoCo 3.3.5
+    NumPy 2.2.6
+
+注意：
+最初仿真环境 lerobot 使用过 NumPy 1.26.4，但新的 linkerbot 0.5.4 明确要求：
+
+    numpy >= 2.2.6
+
+因此 l20lite_real 环境最终应以 NumPy 2.2.6 为准。
+MuJoCo 3.3.5 与该版本可以正常一起运行。
+
+验证方式：
+
+    python - <<'PY'
+    import numpy as np
+    import mujoco
+    import linkerbot
+    from linkerbot import L20lite
+
+    print("NumPy :", np.__version__)
+    print("MuJoCo:", mujoco.__version__)
+    print("linkerbot import OK")
+    print("L20lite import OK")
+    PY
+
+
+============================================================
+三、真机 CAN 接入
+============================================================
+
+使用的硬件接口为 PCAN USB，Linux 下表现为 SocketCAN：
+
+    can0
+
+PCAN 设备驱动可识别为：
+
+    pcan_usb
+
+L20Lite 使用 CAN 1 Mbps。
+
+每次系统启动后，如 can0 尚未配置，可执行：
+
+    sudo ip link set can0 down 2>/dev/null || true
+    sudo ip link set can0 type can bitrate 1000000 restart-ms 100
+    sudo ip link set can0 txqueuelen 1024
+    sudo ip link set can0 up
+
+检查：
+
+    ip -details link show can0
+
+正常状态应包含：
+
+    can0 UP
+    state ERROR-ACTIVE
+    bitrate 1000000
+
+can-utils 已安装，可使用：
+
+    which candump
+
+正常路径：
+
+    /usr/bin/candump
+
+如 apt/dpkg 中途被打断，可恢复：
+
+    sudo dpkg --configure -a
+    sudo apt -f install
+
+
+============================================================
+四、LinkerBot SDK 真机接口
+============================================================
+
+安装：
+
+    pip install linkerbot
+
+核心导入：
+
+    from linkerbot import L20lite
+
+右手连接方式：
+
+    with L20lite(
+        side="right",
+        interface_name="can0",
+    ) as hand:
+        ...
+
+读取当前 10-D：
+
+    data = hand.angle.get_blocking(timeout_ms=1000)
+    angles = data.angles.to_list()
+
+控制真机 10-D：
+
+    hand.angle.set_angles([...10 values...])
+
+SDK 角度使用约 0~100 的归一化数值。
+
+
+============================================================
+五、左右手识别问题与解决
+============================================================
+
+最初误以为当前连接的是左手，因此使用：
+
+    side="left"
+
+时持续 timeout。
+
+随后创建 side probe，对 left/right 分别进行只读测试。
+
+结果：
+
+    left  -> TIMEOUT
+    right -> SUCCESS
+
+最终确认实际拿到并连接的是右手，因此后续统一使用：
+
+    side="right"
+
+这一步排除了 CAN 协议、PCAN 驱动和 SDK 本身的问题。
+
+
+============================================================
+六、真机 10-D SDK 通道顺序
+============================================================
+
+最终使用的真实 SDK 语义顺序为：
+
+    [0] thumb_flex
+    [1] thumb_abd
+    [2] index_flex
+    [3] middle_flex
+    [4] ring_flex
+    [5] pinky_flex
+    [6] index_abd
+    [7] ring_abd
+    [8] pinky_abd
+    [9] thumb_yaw
+
+第一次成功读取到的右手数据示例：
+
+    [
+        99.6078431372549,
+        49.80392156862745,
+        99.6078431372549,
+        99.6078431372549,
+        99.6078431372549,
+        99.6078431372549,
+        4.313725490196078,
+        7.0588235294117645,
+        0.0,
+        43.92156862745098
+    ]
+
+说明：
+这些值是实际 SDK 回读值，不是我们人为定义的 MuJoCo 关节角。
+
+
+============================================================
+七、真机 10-D 每个通道的实际运动方向
+============================================================
+
+我们没有依赖名字猜测，而是逐个通道在真机上实际运动确认。
+
+------------------------------------------------------------
+1. 四指 flex
+------------------------------------------------------------
+
+[2] index_flex
+    数值降低 -> 食指更加弯曲
+    数值升高 -> 食指伸直
+
+并且真机实际观察到：
+当 index_flex 改变时，食指 MCP、PIP、DIP 三段一起联动。
+
+这说明真机控制结构确实不是 20 个完全独立关节，而是：
+主动低维控制 + 机械耦合。
+
+[3] middle_flex
+    数值降低 -> 中指更加弯曲
+    数值升高 -> 中指伸直
+
+[4] ring_flex
+    数值降低 -> 无名指更加弯曲
+    数值升高 -> 无名指伸直
+
+[5] pinky_flex
+    数值降低 -> 小指更加弯曲
+    数值升高 -> 小指伸直
+
+因此四个 flex 通道统一规律：
+
+    Real SDK flex ↓ = finger flexion ↑
+
+
+------------------------------------------------------------
+2. 三个 ABD / lateral 通道
+------------------------------------------------------------
+
+[6] index_abd
+    数值增加 -> 食指远离中指
+    数值降低 -> 食指靠近中指
+
+[7] ring_abd
+    数值增加 -> 无名指远离中指
+    数值降低 -> 无名指靠近中指
+
+[8] pinky_abd
+    数值增加 -> 小指远离无名指
+    数值降低 -> 小指靠近无名指
+
+因此三个 ABD 通道统一规律：
+
+    Real SDK ABD ↑ = finger spread ↑
+
+
+------------------------------------------------------------
+3. 拇指三个通道
+------------------------------------------------------------
+
+[0] thumb_flex
+测试例：
+
+    99.22 -> 79.22
+
+观察：
+
+    数值降低 -> 拇指向掌心弯
+    数值升高 -> 拇指远离掌心
+
+
+[1] thumb_abd
+测试例：
+
+    48.63 -> 63.63
+
+观察：
+
+    数值增加 -> 拇指靠近食指
+    数值降低 -> 拇指远离食指
+
+
+[9] thumb_yaw
+测试例：
+
+    43.92 -> 58.92
+
+观察：
+
+    数值增加 -> 拇指绕自身方向顺时针旋转
+    数值降低 -> 拇指逆时针旋转
+
+
+============================================================
+八、MuJoCo 动态模型结构
+============================================================
+
+当前主要动态模型：
+
+    /home/pwc/RoboCode/l20lite/generated/dual_l20lite_dynamic.xml
+
+构建脚本：
+
+    /home/pwc/RoboCode/l20lite/build_l20lite_dynamic.py
+
+仿真接口：
+
+    /home/pwc/RoboCode/l20lite/l20lite_sim.py
+
+当前模型关键统计：
+
+    timestep = 0.002 s
+    nq  = 40
+    nv  = 40
+    nu  = 20
+    neq = 20
+
+含义：
+
+    双手共 40 个关节；
+    双手共 20 个主动 actuator；
+    即每只手 10 个主动控制通道；
+    双手共 20 条 mimic equality；
+    即每只手有 10 个从动耦合关系。
+
+
+============================================================
+九、MuJoCo 每只手的 10 个主动自由度
+============================================================
+
+当前 MuJoCo 每只手的主动关节顺序：
+
+    [0] thumb_cmc_pitch
+    [1] thumb_cmc_yaw
+    [2] index_mcp_pitch
+    [3] middle_mcp_pitch
+    [4] ring_mcp_pitch
+    [5] pinky_mcp_pitch
+    [6] index_mcp_roll
+    [7] ring_mcp_roll
+    [8] pinky_mcp_roll
+    [9] thumb_cmc_roll
+
+l20lite_sim.py 当前 set_angles([10 values]) 的输入为 0~100，
+内部再线性映射为对应 URDF/MJCF joint 的 lower~upper rad 范围。
+
+
+============================================================
+十、MuJoCo mimic 机械耦合
+============================================================
+
+当前 MuJoCo 没有把 PIP/DIP 等从动关节再设置 actuator，
+而是使用 MuJoCo equality 实现 URDF mimic：
+
+    q_child = multiplier * q_parent + offset
+
+典型关系：
+
+拇指：
+
+    thumb_mcp = 1.38 * thumb_cmc_pitch
+    thumb_ip  = 1.49 * thumb_cmc_pitch
+
+食指：
+
+    index_pip = 1.30 * index_mcp_pitch
+    index_dip = 0.46 * index_mcp_pitch
+
+中指：
+
+    middle_pip = 1.30 * middle_mcp_pitch
+    middle_dip = 0.46 * middle_mcp_pitch
+
+右手当前生成 XML 中：
+
+    ring_pip  = 1.34 * ring_mcp_pitch
+    ring_dip  = 0.46 * ring_mcp_pitch
+
+    pinky_pip = 1.34 * pinky_mcp_pitch
+    pinky_dip = 0.46 * pinky_mcp_pitch
+
+注意：
+这正是我们从官方 URDF mimic 信息转换到 MuJoCo equality 后得到的模型。
+
+在动态 demo 中实际验证过，例如食指：
+
+    MCP ≈ 1.357 rad
+    PIP ≈ 1.764 rad
+    DIP ≈ 0.624 rad
+
+并得到：
+
+    PIP / MCP ≈ 1.300
+    DIP / MCP ≈ 0.460
+
+
+============================================================
+十一、为什么最初拇指映射看起来“不对”
+============================================================
+
+早期进行单关节 MuJoCo 测试时，我们曾观察到：
+
+    thumb_cmc_pitch
+    thumb_cmc_yaw
+    thumb_cmc_roll
+
+在全零或不同参考姿态下，其肉眼表现似乎和真实 SDK 的
+thumb_flex / thumb_abd / thumb_yaw 名字不能直接对应。
+
+这并不是最终的映射错误。
+
+根本原因是：
+
+拇指三个 CMC DoF 是串联运动链。
+
+即：
+
+    thumb_cmc_roll
+        ↓
+    thumb_cmc_yaw
+        ↓
+    thumb_cmc_pitch
+        ↓
+    thumb_mcp
+        ↓
+    thumb_ip
+
+因此同一个根部关节在不同 pitch/yaw/roll 基准姿态下，
+其末端表现会明显不同。
+
+早期测试：
+真机是在当前实际姿态附近做扰动，
+MuJoCo 却在另外两个拇指 DoF 接近 0 的姿态做扰动。
+
+两边 baseline 不一致，因此肉眼运动表现不能直接比较。
+
+
+============================================================
+十二、Matched-Baseline 拇指验证
+============================================================
+
+真机测试时参考姿态大约：
+
+    thumb_flex = 99.22
+    thumb_abd  = 48.63
+    thumb_yaw  = 43.92
+
+随后建立 MuJoCo matched-baseline，在近似对应姿态下，
+分别扰动：
+
+    thumb_cmc_pitch
+    thumb_cmc_yaw
+    thumb_cmc_roll
+
+最终观察：
+
+MuJoCo thumb_cmc_pitch 增加：
+    -> 拇指朝掌心
+
+MuJoCo thumb_cmc_yaw 增加：
+    -> 拇指远离食指
+
+MuJoCo thumb_cmc_roll 增加：
+    -> 拇指逆时针旋转
+
+与真机相比：
+
+Real thumb_flex 减少：
+    -> 朝掌心
+
+Real thumb_abd 增加：
+    -> 靠近食指
+
+Real thumb_yaw 增加：
+    -> 顺时针
+
+因此最终证明：
+三个拇指 semantic DoF 仍然是 1:1 对应，
+不需要 3x3 混合映射，只需要处理 polarity。
+
+
+============================================================
+十三、最终验证通过的 Real SDK ↔ MuJoCo 10-D mapping
+============================================================
+
+最终映射：
+
+ID  Real SDK            MuJoCo active joint        Polarity
+------------------------------------------------------------
+
+0   thumb_flex          thumb_cmc_pitch            INVERT
+1   thumb_abd           thumb_cmc_yaw              INVERT
+2   index_flex          index_mcp_pitch            INVERT
+3   middle_flex         middle_mcp_pitch           INVERT
+4   ring_flex           ring_mcp_pitch             INVERT
+5   pinky_flex          pinky_mcp_pitch             INVERT
+6   index_abd           index_mcp_roll              SAME
+7   ring_abd            ring_mcp_roll               SAME
+8   pinky_abd           pinky_mcp_roll              SAME
+9   thumb_yaw           thumb_cmc_roll              INVERT
+
+
+因此：
+
+反向通道：
+
+    [0, 1, 2, 3, 4, 5, 9]
+
+同向通道：
+
+    [6, 7, 8]
+
+
+当前一阶归一化映射：
+
+对于 INVERT：
+
+    q_sim = 100 - q_real
+
+对于 SAME：
+
+    q_sim = q_real
+
+
+对应代码：
+
+    INVERT_MASK = [
+        True,
+        True,
+        True,
+        True,
+        True,
+        True,
+        False,
+        False,
+        False,
+        True,
+    ]
+
+
+============================================================
+十四、正式 mapping 文件
+============================================================
+
+路径：
+
+    /home/pwc/RoboCode/l20lite/l20lite_joint_mapping.py
+
+主要功能：
+
+1. 定义真实 SDK 语义顺序：
+
+    REAL_SDK_ORDER
+
+2. 定义 MuJoCo 主动关节顺序：
+
+    MUJOCO_JOINT_ORDER
+
+3. 定义：
+
+    INVERT_MASK
+
+4. 提供真机到仿真的转换：
+
+    real_sdk_to_mujoco(values)
+
+5. 提供仿真到真机的逆转换：
+
+    mujoco_to_real_sdk(values)
+
+6. 提供字典和调试打印接口。
+
+测试：
+
+    python /home/pwc/RoboCode/l20lite/l20lite_joint_mapping.py
+
+示例输出：
+
+    thumb_flex 99.22
+        -> thumb_cmc_pitch 0.78
+
+    thumb_abd 48.63
+        -> thumb_cmc_yaw 51.37
+
+    index_flex 99.61
+        -> index_mcp_pitch 0.39
+
+    index_abd 4.31
+        -> index_mcp_roll 4.31
+
+    thumb_yaw 43.92
+        -> thumb_cmc_roll 56.08
+
+Round-trip：
+
+    real
+      -> sim
+      -> real
+
+最大误差：
+
+    0.0
+
+
+============================================================
+十五、Sim–Real 单自由度同步运动验证
+============================================================
+
+文件：
+
+    /home/pwc/RoboCode/l20lite/13_compare_real_sim_motion.py
+
+逻辑：
+
+同一条“真实 SDK semantic command”同时发送给：
+
+    真实 L20Lite
+        +
+    real_sdk_to_mujoco()
+        -> MuJoCo L20Lite
+
+逐个测试 10 个通道。
+
+用户现场肉眼观察结果：
+
+    0 thumb_flex    ✅
+    1 thumb_abd     ✅
+    2 index_flex    ✅
+    3 middle_flex   ✅
+    4 ring_flex     ✅
+    5 pinky_flex    ✅
+    6 index_abd     ✅
+    7 ring_abd      ✅
+    8 pinky_abd     ✅
+    9 thumb_yaw     ✅
+
+结论：
+
+    10 个自由度真机和 MuJoCo 的运动方向全部一致。
+
+
+============================================================
+十六、Sim–Real 标准姿态联合验证
+============================================================
+
+文件：
+
+    /home/pwc/RoboCode/l20lite/14_compare_real_sim_poses.py
+
+测试方式：
+
+读取真机当前姿态作为 baseline，
+随后真机和 MuJoCo 同时执行相同 semantic 10-D 姿态。
+
+测试姿态包括：
+
+1. BASE / OPEN
+
+2. FOUR-FINGER HALF CLOSE
+   四指中等程度弯曲
+
+3. FOUR-FINGER MODERATE CLOSE
+   四指进一步弯曲
+
+4. INDEX FLEX
+   单独食指弯曲
+
+5. FINGER SPREAD
+   index/ring/pinky lateral DoF 同时张开
+
+6. THUMB OPPOSE
+   拇指向掌心 + 接近食指
+
+7. THUMB YAW
+   拇指轴向旋转
+
+用户最终现场观察：
+
+    所有姿态均一致。
+
+因此当前 0~100 简单线性 mapping 已经足够支撑下一阶段。
+
+现阶段不需要额外做：
+
+    per-joint endpoint calibration
+    scale calibration
+    offset calibration
+
+如果后续在高精度抓取实验中发现某一维存在系统性幅值误差，
+再增加：
+
+    q_sim = a_i * q_real + b_i
+
+即可，无需改变整个架构。
+
+
+============================================================
+十七、12_realtime_real_to_mujoco.py 的作用与局限
+============================================================
+
+文件：
+
+    /home/pwc/RoboCode/l20lite/12_realtime_real_to_mujoco.py
+
+设计：
+
+    真机只读
+        -> 10-D 回读
+        -> mapping
+        -> MuJoCo 实时跟随
+
+运行日志显示：
+
+    read_count 持续增长
+    timeout_count = 0
+
+说明 CAN + SDK 连续读取非常稳定。
+
+但由于真机角度回读反映的是实际驱动/当前电机状态，
+仅仅人工掰动或轻微触碰并不适合作为清晰的 Sim–Real 方向验证。
+
+因此最终真正有判断价值的是：
+
+    13_compare_real_sim_motion.py
+
+即：
+真机和仿真同时主动执行同一条 semantic command。
+
+
+============================================================
+十八、本阶段真机相关代码
+============================================================
+
+当前 real_hand 目录已确认/使用的主要脚本：
+
+    /home/pwc/RoboCode/l20lite/real_hand/01_read_right_hand.py
+
+作用：
+读取真实右手 10-D SDK 角度，验证基础通信。
+
+
+    /home/pwc/RoboCode/l20lite/real_hand/02_probe_side.py
+
+作用：
+只读测试 left/right side，最终确认当前设备是 right。
+
+
+    /home/pwc/RoboCode/l20lite/real_hand/03_test_right_index_flex.py
+
+作用：
+首次主动测试 index_flex，确认：
+数值降低 -> 食指弯曲；
+同时 MCP/PIP/DIP 联动。
+
+
+    /home/pwc/RoboCode/l20lite/real_hand/05_probe_right_flex.py
+
+作用：
+依次验证：
+middle_flex
+ring_flex
+pinky_flex
+
+
+    /home/pwc/RoboCode/l20lite/real_hand/06_probe_right_abd.py
+
+作用：
+验证：
+index_abd
+ring_abd
+pinky_abd
+的实际侧向运动方向。
+
+
+    /home/pwc/RoboCode/l20lite/real_hand/07_probe_right_thumb.py
+
+作用：
+验证：
+thumb_flex
+thumb_abd
+thumb_yaw
+的真实运动语义及方向。
+
+
+============================================================
+十九、后续为了 Sim–Real 对齐创建的代码
+============================================================
+
+目前位于项目根目录：
+
+    /home/pwc/RoboCode/l20lite/08_probe_mujoco_right_10d.py
+
+作用：
+纯 MuJoCo 逐个测试右手 10 个主动关节的正方向。
+
+
+    /home/pwc/RoboCode/l20lite/09_probe_mujoco_thumb_roll.py
+
+作用：
+专门观察 MuJoCo right_thumb_cmc_roll 的运动。
+
+
+    /home/pwc/RoboCode/l20lite/10_analyze_mujoco_thumb_basis.py
+
+作用：
+计算拇指 3-DoF 对末端位置/姿态的局部运动学 basis/Jacobian；
+用于诊断，而不是最终 mapping。
+
+
+    /home/pwc/RoboCode/l20lite/11_probe_mujoco_thumb_matched_baseline.py
+
+作用：
+在与真机接近的拇指 baseline 姿态下重新测试三个 CMC DoF；
+最终解决早期拇指映射看起来不一致的问题。
+
+
+    /home/pwc/RoboCode/l20lite/12_realtime_real_to_mujoco.py
+
+作用：
+真机只读 10-D -> mapping -> MuJoCo 实时镜像。
+
+
+    /home/pwc/RoboCode/l20lite/13_compare_real_sim_motion.py
+
+作用：
+真机和 MuJoCo 同时主动执行同一条 semantic 10-D command，
+逐维验证运动方向。
+最终 10/10 全部通过。
+
+
+    /home/pwc/RoboCode/l20lite/14_compare_real_sim_poses.py
+
+作用：
+真机和 MuJoCo 同时执行多自由度标准姿态，
+比较整体 hand pose。
+最终全部通过。
+
+
+    /home/pwc/RoboCode/l20lite/l20lite_joint_mapping.py
+
+作用：
+正式的 Real SDK ↔ MuJoCo 10-D 转换层。
+这是后续系统核心共享模块，不属于单纯“真机脚本”。
+
+
+============================================================
+二十、文件目录应如何理解
+============================================================
+
+目前 08~14 确实没有全部放在 real_hand/ 下。
+
+这不是功能错误。
+
+建议按职责理解：
+
+A. 真机 bring-up / SDK 独立测试
+--------------------------------
+
+应放：
+
+    /home/pwc/RoboCode/l20lite/real_hand/
+
+例如：
+
+    01_read_right_hand.py
+    02_probe_side.py
+    03_test_right_index_flex.py
+    05_probe_right_flex.py
+    06_probe_right_abd.py
+    07_probe_right_thumb.py
+
+
+B. 纯 MuJoCo / 运动学辨识
+--------------------------------
+
+建议继续放项目根目录，或以后统一放 calibration/：
+
+    08_probe_mujoco_right_10d.py
+    09_probe_mujoco_thumb_roll.py
+    10_analyze_mujoco_thumb_basis.py
+    11_probe_mujoco_thumb_matched_baseline.py
+
+
+C. Sim–Real 联合验证
+--------------------------------
+
+    12_realtime_real_to_mujoco.py
+    13_compare_real_sim_motion.py
+    14_compare_real_sim_poses.py
+
+它们既依赖真机 linkerbot，又依赖：
+
+    l20lite_sim.py
+    l20lite_joint_mapping.py
+
+因此从代码职责上说它们属于“Sim–Real validation”，
+而不是纯 real_hand。
+
+目前继续放项目根目录是完全合理的，
+而且可避免移动后 Python import path 和 MODEL_PATH 需要修改。
+
+
+D. 核心共享模块
+--------------------------------
+
+必须建议继续放根目录：
+
+    /home/pwc/RoboCode/l20lite/l20lite_sim.py
+
+    /home/pwc/RoboCode/l20lite/l20lite_joint_mapping.py
+
+它们不是测试脚本，而是后续正式系统都会依赖的基础模块。
+
+
+============================================================
+二十一、本阶段最终技术结论
+============================================================
+
+1. LinkerBot SDK 已成功连接真实 L20Lite 右手。
+
+2. CAN：
+       can0
+       1 Mbps
+   工作稳定。
+
+3. 真机控制空间为 10-D semantic command。
+
+4. 四指 flex 在真机上驱动整根手指联动，
+   证明低维主动控制 + 从动机械耦合结构成立。
+
+5. MuJoCo 中采用：
+       10 active DoF + mimic equality
+   是正确的建模方向。
+
+6. 真机 SDK 10-D 与 MuJoCo 10-D 已建立完整对应。
+
+7. 所有 10 个单自由度方向均经过：
+       真机 + MuJoCo 同步执行
+   验证正确。
+
+8. 多自由度标准姿态也全部经过：
+       真机 + MuJoCo 同步执行
+   验证一致。
+
+9. 因此当前简单 0~100 mapping 已经足够。
+
+10. 目前无需额外 endpoint/scale/offset calibration。
+
+11. 可以正式认为：
+
+    L20Lite Sim-to-Real 10-D hand model validated.
+
+
+============================================================
+二十二、对 UniDexGrasp 后续工作的意义
+============================================================
+
+现在后续抓取不应该优化完整 20-D 关节角，
+而应该始终围绕真实 L20Lite 可以执行的：
+
+    q_L20Lite ∈ R^10
+
+展开。
+
+后续正式路线：
+
+    UniDexGrasp
+        ↓
+    ShadowHand grasp
+        ↓
+    Official L20 Adapter
+        ↓
+    L20 teacher grasp
+        ↓
+    L20Lite Retargeter
+        ↓
+    L20Lite semantic 10-D
+        ↓
+    ┌─────────────────────┐
+    │                     │
+    ↓                     ↓
+    MuJoCo                 Real L20Lite
+    ↓                      ↓
+    active DoF             LinkerBot SDK
+    ↓                      ↓
+    mimic equality         mechanical coupling
+    ↓                      ↓
+    full hand pose         full hand pose
+
+
+最关键的是：
+
+Retargeter 最终只需要输出一条 L20Lite 可执行的 10-D command。
+
+同一个抓取 command 可以：
+
+1. 先在 MuJoCo 中运行；
+2. 检查接触、穿透、碰撞、抓取稳定性；
+3. 通过后经过 l20lite_joint_mapping.py；
+4. 直接转换为真机 SDK command；
+5. 在真实 L20Lite 上执行。
+
+因此后续真正的核心问题已经从：
+
+    “MuJoCo 的 L20Lite 和真机到底是不是一样？”
+
+转变成：
+
+    “如何把 UniDexGrasp / L20 teacher grasp
+     最优地重定向成 L20Lite 的 10-D 可执行抓取？”
+
+这就是下一阶段 L20Lite Retargeter 的正式研究问题。
+
+
+============================================================
+二十三、下一阶段
+============================================================
+
+下一阶段开始：
+
+    UniDexGrasp
+        -> Official L20 Adapter
+        -> L20 teacher grasp
+        -> L20Lite Retargeter
+        -> 10-D + mimic
+        -> MuJoCo grasp validation
+        -> real hand execution
+
+重点工作：
+
+1. 明确 UniDexGrasp 输出 grasp representation；
+2. 明确官方 L20 Adapter 输入/输出；
+3. 获取一个实际 L20 teacher grasp；
+4. 定义 L20Lite 10-D retargeting optimization；
+5. 优化目标优先保持：
+       fingertip/contact geometry
+       object-relative grasp pose
+       collision feasibility
+       L20Lite mechanical constraints
+6. 在 MuJoCo 中验证；
+7. 同一条 10-D command 迁移到真机。
+
+至此，L20Lite 真机接入与 Sim–Real 基础验证阶段完成。

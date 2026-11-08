@@ -1,0 +1,188 @@
+================================================================================
+L20Lite 遥操作实现总结（HTS Quest3 → L20Lite 10-D）
+================================================================================
+
+一、总目标
+--------------------------------------------------------------------------------
+用 Quest 3 的手势追踪（HTS）实时驱动 L20Lite 灵巧手，实现 10 自由度遥操作。
+
+二、整体链路
+--------------------------------------------------------------------------------
+Quest 3 手势追踪
+    ↓ HTS（手部追踪）
+    ↓ adb reverse tcp:8000
+    ↓ hand_tracking_sdk
+    ↓ 21×3 landmarks + wrist pose
+    ↓ 人手语义特征提取（l20lite_hand_features.py）
+    ↓ 个人标定（04_calibrate.py 生成的 JSON）
+    ↓ Semantic Retargeter（l20lite_retargeter.py）
+    ↓ 10-D 命令（0~100）
+    ├──→ 真机：LinkerBot SDK（03_realtime_teleop.py）
+    └──→ 仿真：l20lite_joint_mapping.py → MuJoCo
+
+三、运行环境
+--------------------------------------------------------------------------------
+- HTS 特征提取 / 诊断 / 真机遥操作：conda env `hts`
+    （hand_tracking_sdk 1.1.0 + linkerbot 0.5.4 + numpy 2.2.6 + scipy 1.15.3）
+- MuJoCo 仿真：conda env `openarmx_hts_mj`（mujoco 3.6.0）
+- CAN 硬件：PCAN-USB → SocketCAN can0 → 1 Mbps
+- Python 路径：/home/robot/miniconda3/envs/hts/bin/python
+
+四、10-D 控制空间（Real SDK 顺序，0~100）
+--------------------------------------------------------------------------------
+  [0] thumb_flex    拇指弯曲伸直（卷 ↔ 翘）
+  [1] thumb_abd     拇指左右摆（远离 ↔ 靠近食指）
+  [2] index_flex    食指弯曲
+  [3] middle_flex   中指弯曲
+  [4] ring_flex     无名指弯曲
+  [5] pinky_flex    小指弯曲
+  [6] index_abd     食指侧摆
+  [7] ring_abd      无名指侧摆
+  [8] pinky_abd     小指侧摆
+  [9] thumb_yaw     拇指旋转（顺/逆时针）
+
+五、关键结论（实测得出，重要）
+--------------------------------------------------------------------------------
+1. HTS 的 landmarks 本身在「手腕局部坐标系」里（wrist landmark 恒为原点，
+   四个 MCP 不随手腕旋转移动，只有指尖随手指弯曲动）。
+   → 直接由 landmarks 构造 palm frame 即可，不需要、也不该用 wrist quaternion
+     去搬运（搬运反而会产生 90°/170° 的假 err）。
+   → wrist quaternion 是手在世界系的朝向，与 10-D 手指语义无关，本链路不用它。
+
+2. thumb_flex 用「方向量」chord_z（拇指 MCP→TIP 方向在掌心法向的带符号 z 分量）：
+   - 距离量 dist_palm 分不清「垂直掌心」和「平放贴食指」（两者指尖都离掌心远）。
+   - chord_z 能分开：垂直≈+0.7，平放≈0，弯掌心≈-0.1。
+   - 必须带符号，不能取 abs（取 abs 会把弯掌心 -0.11 和平放 +0.12 压成 0.11/0.12）。
+
+3. thumb_abd 用「方向量」azim（拇指 chord 在掌心平面的方位角）：
+   - 距离量 dist_index 对「左右摆」这个角运动不敏感（指尖到食指距离几乎不变）。
+   - azim 敏感：远离食指≈-40°，靠近食指≈+38°（摆幅约 79°）。
+
+4. thumb_yaw（旋转）与弯曲/对掌耦合，landmark 拆不干净，目前只能「微动」。
+   - 用的量：近节指骨 MCP→IP 绕掌骨 CMC→MCP 的方位角。
+   - 局限：拇指伸直时该量退化（NaN，回中立 50）；且随弯曲会小幅变化。
+
+5. thumb_abd 真机方向实测与早期文档（notes §16「thumb_abd↑=靠近食指」）相反，
+   已把输出方向翻转。当前实测方向见「八、方向约定」。
+
+六、代码清单 + 用途 + 运行命令
+--------------------------------------------------------------------------------
+目录：/home/robot/codePWC/hand-tracking-streamer/l20lite_teleop/
+
+1. l20lite_hand_features.py（核心模块，不依赖 mujoco/linkerbot）
+   用途：从 HandFrame 的 21×3 landmarks 提取人手语义特征。
+   输出：palm_frame（origin/R）、points_palm、palm_width、
+         finger_bend_angles、flex_latents（四指）、abd_angles（三指）、
+         thumb（tip_position/axis_direction/tip_index_distance 等）。
+   入口：extract_features(frame) → dict
+
+2. l20lite_retargeter.py（核心模块，纯 numpy）
+   用途：把 10 个人手语义特征映射到 L20Lite 10-D 命令（0~100）。
+   入口：retarget(features, calib=None) → np.ndarray(10)
+         load_calib(path) → 标定 JSON
+         thumb_proxies(features) / thumb_roll_deg(features)
+   常量：THUMB_YAW_SIGN、THUMB_YAW_GAIN、FLAT_CHORD_Z
+
+3. 01_inspect_human_features.py
+   用途：第一阶段，打印人手特征（不控制机器人），验证 feature 连续稳定。
+   运行：python 01_inspect_human_features.py --hand right --hz 10
+
+4. 02_diagnose_wrist_convention.py
+   用途：诊断 wrist quaternion 与 landmark palm frame 的坐标 convention。
+         （结论：landmarks 在手腕局部系，quaternion 解耦，不需要坐标变换。）
+   运行：python 02_diagnose_wrist_convention.py --selftest     # 自检
+         python 02_diagnose_wrist_convention.py --hand right --seconds 20 --save wrist.npz
+
+5. 03_realtime_teleop.py（真机遥操作主程序）
+   用途：HTS → extract_features → retarget → 真机 linkerbot。
+         默认 dry-run（只打印），--enable-hand 才发真机。
+         含 EMA 平滑 + 步长限制 + 初始/退出 OPEN_POSE。
+   运行：python 03_realtime_teleop.py --hand right                          # dry-run
+         python 03_realtime_teleop.py --hand right --enable-hand --calib calibration/right.json
+         （可选 --readback 读真机角度、--smooth-alpha、--max-step）
+
+6. 04_calibrate.py（个人标定采集）
+   用途：引导做 6 个姿势，采各自由度 open/closed 端点，生成标定 JSON。
+   运行：python 04_calibrate.py --hand right --out calibration/right.json
+   6 个姿势：OPEN / FIST / SPREAD / THUMB_UP / THUMB_FLEX_IN / THUMB_OPPOSE
+
+7. 05_thumb_debug.py（拇指特征调试）
+   用途：实时打印拇指候选特征（dist_palm/chord_z/azim/dist_index/roll_deg），
+         用于确定哪个量能区分「垂直/平放/弯掌心」「远离/靠近食指」。
+   运行：python 05_thumb_debug.py --hand right --hz 5
+
+8. 06_thumb_manual.py（真机拇指手动控制，绕过 HTS）
+   用途：直接连真机，单独控制 thumb_flex/thumb_abd/thumb_yaw 三个自由度，
+         用于隔离验证真机硬件每个自由度的运动方向。
+   运行：python 06_thumb_manual.py --hand right --sweep all      # 扫三个自由度
+         python 06_thumb_manual.py --hand right --sweep flex     # 扫单个
+         python 06_thumb_manual.py --hand right                  # 交互式
+
+七、特征映射（l20lite_retargeter.py）
+--------------------------------------------------------------------------------
+  flex[f]     : flex_latent(rad)   [open, closed] → [100, 0]
+  abd[f]      : abd_angle(deg)     [together, spread] → [0, 100]
+  thumb_flex  : chord_z（带符号）   [open, closed] → [100, 0]
+  thumb_abd   : azim（方位角，度）  [open, closed] → [100, 0]   ← 方向已翻转
+  thumb_yaw   : roll_deg（度）     50 + SIGN·GAIN·(roll_deg − neutral)，夹到 [0,100]
+
+  标定 JSON 结构（calibration/right.json）：
+  {
+    "flex": {index/middle/ring/pinky: {"open","closed"}},       # rad
+    "abd":  {index/ring/pinky: {"together","spread"}},           # deg
+    "thumb_flex": {"open","closed"},                             # chord_z（带符号）
+    "thumb_abd":  {"open","closed"},                             # azim（度）
+    "thumb_yaw":  {"neutral"}                                    # roll（度）
+  }
+
+八、方向约定（真机实测，当前代码）
+--------------------------------------------------------------------------------
+  thumb_flex : 命令 ↑ = 远离掌心（竖起/翘起），命令 ↓ = 向掌心弯曲
+  thumb_abd  : 命令 ↑ = 远离食指（往外撇），命令 ↓ = 靠近食指（往食指摆）
+               （注：与早期 notes §16 相反，代码已翻转）
+  thumb_yaw  : 命令 ↑ = 顺时针旋转
+  四指 flex  : 100 ≈ 伸直，↓ = 更弯
+  三指 abd   : ↑ = 远离参考指（张开）
+
+九、当前状态
+--------------------------------------------------------------------------------
+  可用（9 自由度）：
+    - 四指 flex（index/middle/ring/pinky）✅
+    - 三指 abd（index/ring/pinky）✅
+    - thumb_flex（弯曲伸直/竖拇指）✅
+    - thumb_abd（左右摆/靠近远离食指）✅（方向已校正）
+  受限：
+    - thumb_yaw（旋转）：微动，与弯曲耦合，未独立解耦 ⚠️
+
+十、运行前准备（每次开机后）
+--------------------------------------------------------------------------------
+1. 配置 CAN（sudo）：
+     sudo ip link set can0 down 2>/dev/null || true
+     sudo ip link set can0 type can bitrate 1000000 restart-ms 100
+     sudo ip link set can0 txqueuelen 1024
+     sudo ip link set can0 up
+     ip -details link show can0     # 确认 state ERROR-ACTIVE、bitrate 1000000
+
+2. 连 Quest：
+     cd ~/codePWC/hand-tracking-streamer && ./hts_vr_connect.sh
+     （Quest 那头确认 HTS 手部追踪 app 开着、协议 TCP、端口 8000）
+
+3. 标定（只需 HTS，无需真机）：
+     cd l20lite_teleop
+     python 04_calibrate.py --hand right --out calibration/right.json
+
+4. 遥操作（需 can0 + Quest + 真机）：
+     python 03_realtime_teleop.py --hand right --enable-hand --calib calibration/right.json
+
+十一、下一步（待办）
+--------------------------------------------------------------------------------
+- thumb_yaw（旋转）独立控制：需要更干净的旋转特征，或换传感方式（如腕带 IMU）。
+- 真机遥操作整体复测、手感调参（gain/死区/平滑）。
+- MuJoCo 仿真闭环验证（用 openarmx_hts_mj 环境 + l20lite_joint_mapping.py）。
+Resume this session with:
+claude --resume 5826522b-6d9f-482e-bad9-dc9b5aa9c54c
+
+================================================================================
+注意：下面的内容每次修改不要动，我要回到当前的CLAUDE聊天窗口
+Resume this session with:
+claude --resume 5826522b-6d9f-482e-bad9-dc9b5aa9c54c
